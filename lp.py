@@ -29,9 +29,9 @@ BUFFER_SIZE = 1024
 # Define message types. Need to work out what message types are.
 # Also if the client expects them in network order, etc
 TYPE1 = 0x04
-TYPE2 = 0x06
+TYPE2 = 0x05
 TYPE3 = 0x06
-DLL_TYPE = 0x08
+DLL_TYPE = 0x07
 
 # Max DLL File size
 MAX_FILE_SIZE = 0xFFFFFFFF
