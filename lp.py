@@ -23,7 +23,7 @@ BUFFER_SIZE = 1024
 
 # Define message types
 TYPE1 = 0x04
-TYPE2 = 0x05
+TYPE2 = 0x01020304
 TYPE3 = 0x06
 DLL_TYPE = 0x07
 
@@ -116,15 +116,19 @@ while True:
 			file_length = len(file2read)
 
 			# Pack the message type
-			TYPE2_PAYLOAD = pack('i', TYPE2)
+			
 			# Pack the length of the string: the file we want to read
+			TYPE2_PAYLOAD = pack('i', TYPE2)
 			TYPE2_PAYLOAD += pack('i', file_length)
+			print("Message length ", file_length)
 			# Pack each byte of the string
 			file2read.encode('ascii')
 			for c in bytes(file2read, 'ascii'):
 				TYPE2_PAYLOAD += pack('c', bytes([c]))
 			# Send the message
+			print("Sending payload of type: ", TYPE2)
 			conn.send(TYPE2_PAYLOAD)
+			print("Sent: ", TYPE2_PAYLOAD)
 			# See if client responds
 			print("Listening for response from client: \n")
 			data = conn.recv(BUFFER_SIZE)
@@ -159,10 +163,10 @@ while True:
 			# send it out as type, length, value
 			print(length)
 
-			packed_data = pack('>i', DLL_TYPE)
+			packed_data = pack('i', DLL_TYPE)
 			# >i for length gives mem access error
 			# i and <i for length gives no feedback, and no crash
-			packed_data += pack('>i', length)
+			packed_data += pack('i', length)
 
 			try:
 				byte = f.read(1)
