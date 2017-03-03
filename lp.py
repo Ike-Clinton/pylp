@@ -22,9 +22,9 @@ SERVER_PORT = 1337
 BUFFER_SIZE = 1024
 
 # Define message types
-RESERVED_TYPE1 = 0x01
-RESERVED_TYPE2 = 0x02
-RESERVED_TYPE3 = 0x03
+TYPE1 = 0x04
+TYPE2 = 0x05
+TYPE3 = 0x06
 DLL_TYPE = 0x07
 
 # Max DLL File size
@@ -92,15 +92,54 @@ while True:
 		elif user_input == 0:
 			print("Exiting . . .\n")
 			break
+
+		# We choose option 1
 		elif user_input == 1:
-			print("Got choice 1")
-			conn.send("000100010A")
+			# Simple payload to echo back "sartoris"
+			TYPE1_PAYLOAD = pack('<i', TYPE1)
+			TYPE1_PAYLOAD += pack('i', 8)
+			TYPE1_PAYLOAD += pack('8s', b'sartoris')
+			print("Sending payload of type1: ", TYPE1_PAYLOAD)
+			conn.send(TYPE1_PAYLOAD)
+			# See if client responds
+			print("Listening for response from client: \n")
+			data = conn.recv(BUFFER_SIZE)
+			print("Got data: ", data)
+
+		# We choose option 2
+		# Read a file?
 		elif user_input == 2:
-			print("Got choice 2")
-			conn.send("000200010A")
+			print("Please enter the filename to read")
+			file2read = input(">>>")
+			file_length = len(file2read)
+
+			# Pack the message type
+			TYPE2_PAYLOAD = pack('<i', TYPE2)
+			# Pack the length of the string: the file we want to read
+			TYPE2_PAYLOAD += pack('i', file_length)
+			# Pack each byte of the string
+			for c in file2read:
+				TYPE2_PAYLOAD += pack('c', c)
+			# Send the message
+			conn.send(TYPE2_PAYLOAD)
+			# See if client responds
+			print("Listening for response from client: \n")
+			data = conn.recv(BUFFER_SIZE)
+			print("Got data: ", data)
+
+		# We choose option 3	
 		elif user_input == 3:
 			print("Got choice 3")
-			conn.send("000300010A")
+			TYPE3_PAYLOAD = pack('<i', TYPE3)
+			TYPE3_PAYLOAD += pack('i', 8)
+			TYPE3_PAYLOAD += pack('8s', b'sartoris')
+			conn.send(TYPE3_PAYLOAD)
+			# See if client responds
+			print("Listening for response from client: \n")
+			data = conn.recv(BUFFER_SIZE)
+			print("Got data: ", data)
+
+		# Option 4 to load a .dll file into memory
 		elif user_input == 4:
 			# Prompt for user input
 			print("Enter the name of the dll to load")
@@ -117,15 +156,17 @@ while True:
 			# send it out as type, length, value
 			print(length)
 
-			packed_data = pack('i', DLL_TYPE)
-			packed_data += pack('<i', length)
+			packed_data = pack('>i', DLL_TYPE)
+			# >i for length gives mem access error
+			# i and <i for length gives no feedback, and no crash
+			packed_data += pack('>i', length)
 			file_data = b''
 
 			try:
 				byte = f.read(1)
 				while byte != b'':
 					# Pack the byte into the variable
-					file_data += pack('c', byte)
+					packed_data += pack('c', byte)
 					byte = f.read(1)
 			finally:
 				f.close()
@@ -133,7 +174,10 @@ while True:
 			print('sending "%s"' % binascii.hexlify(packed_data))
 
 			conn.send(packed_data)
-			conn.send(file_data)
+
+			print("Listening for response from client: \n")
+			data = conn.recv(BUFFER_SIZE)
+			print("Got data: ", data)
 			conn.close()
 			# listen for response
 
