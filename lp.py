@@ -13,7 +13,7 @@
 import socket
 import binascii
 import socket
-import struct
+from struct import *
 import sys
 import os.path
 from pathlib import Path
@@ -22,10 +22,10 @@ SERVER_PORT = 1337
 BUFFER_SIZE = 1024
 
 # Define message types
-RESERVED_TYPE1 = 0x01000000
-RESERVED_TYPE2 = 0x02000000
-RESERVED_TYPE3 = 0x03000000
-DLL_TYPE = 0x04000000
+RESERVED_TYPE1 = 0x01
+RESERVED_TYPE2 = 0x02
+RESERVED_TYPE3 = 0x03
+DLL_TYPE = 0x04
 
 # Max DLL File size
 MAX_FILE_SIZE = 0xFFFFFFFF
@@ -51,7 +51,6 @@ print("Got connection from: ", addr)
 
 data = conn.recv(BUFFER_SIZE)
 # If we get empty ACK then break
-print("Data: ", data)
 if not data:
 	print("Got no data from client, exiting . . .\n")
 	conn.close()
@@ -108,36 +107,37 @@ while True:
 			filename = input(">>> ")
 
 			# Open the file in binary mode
-			f = open(filename, "rb")
+			f = open(filename, 'rb')
 
 			# Get the integer file size of the file
 			length = os.path.getsize(filename)
-			# Calculate the difference from length and max size
-			lendiff = MAX_FILE_SIZE - length
-			# Convert length to binary number
-			length_bytes = bin(length)
-			length_bytes += "\0"*lendiff
-
-			# Read the file data into file_bytes
-			file_bytes = f.read()
-
 
 			# get the file bytes count, store it in  "length"
 			# pack the file bytes into a variable
 			# send it out as type, length, value
 			print(length)
-			print("\n")
-			print(length_bytes)
 
-			values = (DLL_TYPE, int(length_bytes))
-			packer = struct.Struct('L L')
-			packed_data = packer.pack(*values)
-			packed_data += struct.pack(file_bytes)
+			packed_data = pack('i', DLL_TYPE)
+			packed_data += pack('<i', length)
+			file_data = b''
 
+			try:
+				byte = f.read(1)
+				while byte != b'':
+					# Pack the byte into the variable
+					if byte != b'':
+						file_data += pack('c', byte)
+					byte = f.read(1)
+			finally:
+				f.close()
 
-			print('sending "%s"' % binascii.hexlify(packed_data), values)
+			print('sending "%s"' % binascii.hexlify(packed_data))
 
-			conn.sendall(packed_data)
+			conn.send(packed_data)
+			conn.send(file_data)
+			conn.close()
+			# listen for response
+
 		else:
 			print("Didn't understand input")
 		
