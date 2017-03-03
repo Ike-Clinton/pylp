@@ -25,7 +25,7 @@ BUFFER_SIZE = 1024
 RESERVED_TYPE1 = 0x01
 RESERVED_TYPE2 = 0x02
 RESERVED_TYPE3 = 0x03
-DLL_TYPE = 0x04
+DLL_TYPE = 0x07
 
 # Max DLL File size
 MAX_FILE_SIZE = 0xFFFFFFFF
@@ -125,8 +125,7 @@ while True:
 				byte = f.read(1)
 				while byte != b'':
 					# Pack the byte into the variable
-					if byte != b'':
-						file_data += pack('c', byte)
+					file_data += pack('c', byte)
 					byte = f.read(1)
 			finally:
 				f.close()
